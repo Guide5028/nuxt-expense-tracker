@@ -2,7 +2,7 @@
 
 A full-stack personal expense tracker built to learn **Nuxt 4**, **Pinia**, and **Oracle Database** end-to-end — a Vue frontend, a Nitro API backend, and real relational persistence.
 
-> 🚧 Work in progress — see [Roadmap](#roadmap) below for current status.
+> ✅ Core CRUD loop working end-to-end: add/list/delete expenses, backed by Oracle. See [Roadmap](#roadmap) for what's next.
 
 ## Stack
 
@@ -68,10 +68,13 @@ App runs at `http://localhost:3000`.
 - [x] Nuxt project scaffold
 - [x] Oracle DB running locally via Docker
 - [x] Server-side connection pool (`server/utils/db.ts`)
-- [ ] Database schema (`categories`, `expenses` tables)
-- [ ] CRUD API routes (`server/api/`)
-- [ ] Pinia store wired to the API
-- [ ] UI: expense list, add-expense form, totals by category
+- [x] Database schema (`categories`, `expenses` tables)
+- [x] CRUD API routes (`server/api/`)
+- [x] Pinia store wired to the API
+- [x] UI: expense list, add-expense form, running total
+- [ ] Totals broken down by category (stats view)
+- [ ] Form validation / nicer error states
+- [ ] Styling pass
 
 ## License
 
