@@ -1,75 +1,78 @@
-# Nuxt Minimal Starter
+# Nuxt Expense Tracker
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+A full-stack personal expense tracker built to learn **Nuxt 4**, **Pinia**, and **Oracle Database** end-to-end — a Vue frontend, a Nitro API backend, and real relational persistence.
 
-## Setup
+> 🚧 Work in progress — see [Roadmap](#roadmap) below for current status.
 
-Make sure to install dependencies:
+## Stack
+
+- **[Nuxt 4](https://nuxt.com/)** — Vue framework: file-based routing, auto-imports, and a built-in server (Nitro)
+- **[Pinia](https://pinia.vuejs.org/)** — state management for the frontend
+- **[Oracle Database](https://www.oracle.com/database/)** (XE, via Docker) — persistence, accessed through [`node-oracledb`](https://node-oracledb.readthedocs.io/) in Thin mode (no Oracle Instant Client required)
+- **TypeScript** throughout
+
+## Architecture
+
+```
+Vue components (app/)
+       │  Pinia store (app/stores/)
+       ▼
+Nitro API routes (server/api/)
+       │  server/utils/db.ts — connection pool
+       ▼
+Oracle Database (Docker container)
+```
+
+## Getting started
+
+### Prerequisites
+
+- Node.js 22+
+- Docker Desktop (for the local Oracle database)
+
+### 1. Start the database
 
 ```bash
-# npm
+docker run -d \
+  --name oracle-xe \
+  -p 1521:1521 \
+  -e ORACLE_PASSWORD=<sys-password> \
+  -e APP_USER=expense_app \
+  -e APP_USER_PASSWORD=<app-password> \
+  gvenzl/oracle-xe:latest
+```
+
+First boot takes a minute or two — check readiness with `docker logs -f oracle-xe` until you see `DATABASE IS READY TO USE!`.
+
+### 2. Configure environment variables
+
+Copy `.env.example` to `.env` and fill in your own values:
+
+```
+NUXT_ORACLE_USER=expense_app
+NUXT_ORACLE_PASSWORD=<app-password>
+NUXT_ORACLE_CONNECT_STRING=localhost:1521/XEPDB1
+```
+
+### 3. Install and run
+
+```bash
 npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
-```
-
-## Development Server
-
-Start the development server on `http://localhost:3000`:
-
-```bash
-# npm
 npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
 ```
 
-## Production
+App runs at `http://localhost:3000`.
 
-Build the application for production:
+## Roadmap
 
-```bash
-# npm
-npm run build
+- [x] Nuxt project scaffold
+- [x] Oracle DB running locally via Docker
+- [x] Server-side connection pool (`server/utils/db.ts`)
+- [ ] Database schema (`categories`, `expenses` tables)
+- [ ] CRUD API routes (`server/api/`)
+- [ ] Pinia store wired to the API
+- [ ] UI: expense list, add-expense form, totals by category
 
-# pnpm
-pnpm build
+## License
 
-# yarn
-yarn build
-
-# bun
-bun run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+MIT
