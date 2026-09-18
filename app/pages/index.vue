@@ -1,8 +1,13 @@
 <script setup>
-const store = useExpensesStore()
-const { categories, expenses, loading, error, totalAmount } = storeToRefs(store)
-const transactionCount = computed(() => expenses.value.length)
-const dailyAverage = computed(() => totalAmount.value / 30)
+const expenseStore = useExpensesStore()
+const incomeStore = useIncomeStore()
+
+const { categories, expenses, loading: expensesLoading, error: expensesError, totalAmount } = storeToRefs(expenseStore)
+const { income, loading: incomeLoading, error: incomeError, totalIncome } = storeToRefs(incomeStore)
+
+const loading = computed(() => expensesLoading.value || incomeLoading.value)
+const error = computed(() => expensesError.value || incomeError.value)
+const netBalance = computed(() => totalIncome.value - totalAmount.value)
 
 const categoryColors = ['#FBBF24', '#38BDF8', '#C084FC', '#F472B6', '#60A5FA', '#34D399']
 
@@ -27,20 +32,56 @@ const categoryColorMap = computed(() => {
   return map
 })
 
-const newExpense = ref({
+const activity = computed(() => {
+  const items = [
+    ...expenses.value.map(e => ({
+      key: `e-${e.ID}`,
+      description: e.DESCRIPTION,
+      category: e.CATEGORY_NAME,
+      amount: Number(e.AMOUNT),
+      sign: -1,
+      dotColor: categoryColorMap.value[e.CATEGORY_NAME],
+      date: e.SPENT_ON,
+      remove: () => expenseStore.deleteExpense(e.ID)
+    })),
+    ...income.value.map(i => ({
+      key: `i-${i.ID}`,
+      description: i.DESCRIPTION,
+      category: 'Income',
+      amount: Number(i.AMOUNT),
+      sign: 1,
+      dotColor: '#34D399',
+      date: i.RECEIVED_ON,
+      remove: () => incomeStore.deleteIncome(i.ID)
+    }))
+  ]
+  return items.sort((a, b) => new Date(b.date) - new Date(a.date))
+})
+
+const entryType = ref('expense')
+const newEntry = ref({
   categoryId: null,
   description: '',
   amount: null
 })
 
 onMounted(async () => {
-  await Promise.all([store.fetchCategories(), store.fetchExpenses()])
+  await Promise.all([
+    expenseStore.fetchCategories(),
+    expenseStore.fetchExpenses(),
+    incomeStore.fetchIncome()
+  ])
 })
 
-async function submitExpense() {
-  if (!newExpense.value.categoryId || !newExpense.value.description || !newExpense.value.amount) return
-  await store.addExpense(newExpense.value)
-  newExpense.value = { categoryId: null, description: '', amount: null }
+async function submitEntry() {
+  if (!newEntry.value.description || !newEntry.value.amount) return
+  if (entryType.value === 'expense') {
+    if (!newEntry.value.categoryId) return
+    await expenseStore.addExpense(newEntry.value)
+  } else {
+    await incomeStore.addIncome(newEntry.value)
+  }
+  newEntry.value = { categoryId: null, description: '', amount: null }
 }
 </script>
 
@@ -56,47 +97,55 @@ async function submitExpense() {
 
     <div class="stats">
       <div class="stat-card">
-        <div class="stat-label">Total Spent</div>
-        <div class="stat-value accent">${{ totalAmount.toFixed(2) }}</div>
+        <div class="stat-label">Total Income</div>
+        <div class="stat-value income">+${{ totalIncome.toFixed(2) }}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Transactions</div>
-        <div class="stat-value">{{ transactionCount }}</div>
+        <div class="stat-label">Total Expenses</div>
+        <div class="stat-value expense">-${{ totalAmount.toFixed(2) }}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Daily Average</div>
-        <div class="stat-value accent">${{ dailyAverage.toFixed(2) }}</div>
+        <div class="stat-label">Net Balance</div>
+        <div class="stat-value" :class="netBalance >= 0 ? 'income' : 'expense'">
+          {{ netBalance >= 0 ? '+' : '-' }}${{ Math.abs(netBalance).toFixed(2) }}
+        </div>
       </div>
     </div>
 
     <div class="content">
       <div class="panel form-panel">
-        <h2>Add Expense</h2>
-        <form @submit.prevent="submitExpense">
-          <select v-model="newExpense.categoryId" aria-label="Category">
+        <h2>Add Entry</h2>
+        <div class="type-toggle">
+          <button type="button" :class="{ active: entryType === 'expense' }" @click="entryType = 'expense'">Expense</button>
+          <button type="button" :class="{ active: entryType === 'income' }" @click="entryType = 'income'">Income</button>
+        </div>
+        <form @submit.prevent="submitEntry">
+          <select v-if="entryType === 'expense'" v-model="newEntry.categoryId" aria-label="Category">
             <option :value="null" disabled>Select category</option>
             <option v-for="c in categories" :key="c.ID" :value="c.ID">{{ c.NAME }}</option>
           </select>
-          <input v-model="newExpense.description" placeholder="Description" aria-label="Description" />
-          <input v-model.number="newExpense.amount" type="number" step="0.01" placeholder="Amount" aria-label="Amount" />
-          <button type="submit">Add Expense</button>
+          <input v-model="newEntry.description" placeholder="Description" aria-label="Description" />
+          <input v-model.number="newEntry.amount" type="number" step="0.01" placeholder="Amount" aria-label="Amount" />
+          <button type="submit">{{ entryType === 'expense' ? 'Add Expense' : 'Add Income' }}</button>
         </form>
       </div>
 
       <div class="panel list-panel">
-        <h2>Recent Expenses</h2>
+        <h2>Recent Activity</h2>
         <p v-if="loading" class="muted">Loading...</p>
         <p v-else-if="error" class="muted">{{ error }}</p>
-        <p v-else-if="!expenses.length" class="muted">No expenses yet.</p>
+        <p v-else-if="!activity.length" class="muted">No activity yet.</p>
         <ul v-else>
-          <li v-for="e in expenses" :key="e.ID">
-            <span class="dot" :style="{ background: categoryColorMap[e.CATEGORY_NAME] }"></span>
+          <li v-for="a in activity" :key="a.key">
+            <span class="dot" :style="{ background: a.dotColor }"></span>
             <div class="expense-info">
-              <div class="expense-desc">{{ e.DESCRIPTION }}</div>
-              <div class="expense-category">{{ e.CATEGORY_NAME }}</div>
+              <div class="expense-desc">{{ a.description }}</div>
+              <div class="expense-category">{{ a.category }}</div>
             </div>
-            <div class="expense-amount">${{ Number(e.AMOUNT).toFixed(2) }}</div>
-            <button type="button" class="delete-btn" aria-label="Delete expense" @click="store.deleteExpense(e.ID)">
+            <div class="expense-amount" :class="a.sign > 0 ? 'income' : 'expense'">
+              {{ a.sign > 0 ? '+' : '-' }}${{ a.amount.toFixed(2) }}
+            </div>
+            <button type="button" class="delete-btn" aria-label="Delete entry" @click="a.remove()">
               <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M1 1L13 13M13 1L1 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
             </button>
           </li>
@@ -105,7 +154,7 @@ async function submitExpense() {
 
       <div class="panel breakdown-panel">
         <h2>By Category</h2>
-        <p v-if="!categoryBreakdown.length" class="muted">No data yet.</p>
+        <p v-if="!categoryBreakdown.length" class="muted">No expenses yet.</p>
         <div v-else class="breakdown-row" v-for="c in categoryBreakdown" :key="c.name">
           <div class="breakdown-label">
             <span>{{ c.name }}</span>
@@ -181,8 +230,12 @@ async function submitExpense() {
   font-size: 1.4em;
 }
 
-.accent {
+.income {
   color: #34D399;
+}
+
+.expense {
+  color: #F87171;
 }
 
 .content {
@@ -208,6 +261,30 @@ async function submitExpense() {
 
 .form-panel {
   width: 260px;
+}
+
+.type-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.type-toggle button {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #2A2E3A;
+  border-radius: 8px;
+  background: #12141A;
+  color: #8B90A0;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.type-toggle button.active {
+  background: #2A2E3A;
+  color: #E5E7EB;
+  border-color: #34D399;
 }
 
 .list-panel {
@@ -298,7 +375,6 @@ li:first-child {
 .expense-amount {
   font-family: 'IBM Plex Mono', monospace;
   font-weight: 600;
-  color: #F87171;
   font-size: 0.9em;
   white-space: nowrap;
 }

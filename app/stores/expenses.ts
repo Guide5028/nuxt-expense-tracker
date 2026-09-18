@@ -8,6 +8,7 @@ interface Expense {
   DESCRIPTION: string;
   AMOUNT: number;
   CATEGORY_NAME: string;
+  SPENT_ON: string;
 }
 
 export const useExpensesStore = defineStore("expenses", () => {

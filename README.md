@@ -2,7 +2,7 @@
 
 A full-stack personal expense tracker built to learn **Nuxt 4**, **Pinia**, and **Oracle Database** end-to-end — a Vue frontend, a Nitro API backend, and real relational persistence.
 
-> ✅ Core CRUD loop working end-to-end: add/list/delete expenses, backed by Oracle. See [Roadmap](#roadmap) for what's next.
+> ✅ Tracks both income and expenses, with a category breakdown and a dark dashboard UI, backed by Oracle. See [Roadmap](#roadmap) for what's next.
 
 ## Stack
 
@@ -54,7 +54,15 @@ NUXT_ORACLE_PASSWORD=<app-password>
 NUXT_ORACLE_CONNECT_STRING=localhost:1521/XEPDB1
 ```
 
-### 3. Install and run
+### 3. Create the schema
+
+Run [`db/schema.sql`](db/schema.sql) against the app schema (creates `categories`, `expenses`, `income`, and seeds a few starter categories):
+
+```bash
+sqlplus expense_app/<app-password>@localhost:1521/XEPDB1 @db/schema.sql
+```
+
+### 4. Install and run
 
 ```bash
 npm install
@@ -68,13 +76,15 @@ App runs at `http://localhost:3000`.
 - [x] Nuxt project scaffold
 - [x] Oracle DB running locally via Docker
 - [x] Server-side connection pool (`server/utils/db.ts`)
-- [x] Database schema (`categories`, `expenses` tables)
+- [x] Database schema (`categories`, `expenses`, `income` tables — see `db/schema.sql`)
 - [x] CRUD API routes (`server/api/`)
 - [x] Pinia store wired to the API
 - [x] UI: expense list, add-expense form, running total
-- [ ] Totals broken down by category (stats view)
+- [x] Totals broken down by category (stats view)
+- [x] Styling pass (dark dashboard theme)
+- [x] Income tracking alongside expenses, with net balance
 - [ ] Form validation / nicer error states
-- [ ] Styling pass
+- [ ] Split `index.vue` into components (`AppHeader`, `StatsRow`, `AddEntryForm`, `ActivityList`, `CategoryBreakdown`)
 
 ## License
 
